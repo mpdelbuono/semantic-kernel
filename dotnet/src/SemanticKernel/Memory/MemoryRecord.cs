@@ -1,5 +1,8 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json.Serialization;
 using Microsoft.SemanticKernel.AI.Embeddings;
 
 namespace Microsoft.SemanticKernel.Memory;
@@ -36,10 +39,55 @@ public class MemoryRecord : IEmbeddingWithMetadata<float>
     /// </summary>
     public string Text { get; private set; } = string.Empty;
 
+    public Dictionary<string, object> ValueData
+    {
+        get => new()
+            {
+                { nameof(this.IsReference), this.IsReference ? "T" : "F" },
+                { nameof(this.ExternalSourceName), this.ExternalSourceName },
+                { nameof(this.Id), this.Id },
+                { nameof(this.Description), this.Description },
+                { nameof(this.Text), this.Text }
+            };
+
+        set
+        {
+            if (value.TryGetValue(nameof(this.IsReference), out object retrievedIsReference))
+            {
+                this.IsReference = retrievedIsReference.ToString() switch
+                {
+                    "T" => true,
+                    "F" => false,
+                    _ => throw new InvalidDataException("Invalid IsReference value")
+                };
+            }
+
+            if (value.TryGetValue(nameof(this.ExternalSourceName), out object retrievedName))
+            {
+                this.ExternalSourceName = retrievedName.ToString();
+            }
+
+            if (value.TryGetValue(nameof(this.Id), out object retrievedId))
+            {
+                this.Id = retrievedId.ToString();
+            }
+
+            if (value.TryGetValue(nameof(this.Description), out object retrievedDescription))
+            {
+                this.Description = retrievedDescription.ToString();
+            }
+
+            if (value.TryGetValue(nameof(this.Text), out object retrievedText))
+            {
+                this.Text = retrievedText.ToString();
+            }
+        }
+    }
+
     /// <summary>
     /// Source content embeddings.
     /// </summary>
-    public Embedding<float> Embedding { get; private set; }
+    public Embedding<float> Embedding { get; set; }
 
     /// <summary>
     /// Prepare an instance about a memory which source is stored externally.
@@ -93,7 +141,8 @@ public class MemoryRecord : IEmbeddingWithMetadata<float>
     /// <summary>
     /// Block constructor, use <see cref="ReferenceRecord"/> or <see cref="LocalRecord"/>
     /// </summary>
-    private MemoryRecord()
+    [JsonConstructor]
+    public MemoryRecord()
     {
     }
 }
